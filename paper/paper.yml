@@ -1,0 +1,18 @@
+title: "Econometrics.jl"
+keywords:
+  - Julia
+  - Econometrics
+  - Regression Analysis
+  - Generalized Linear Models
+  - Discrete Choice Models
+  - Instrumental Variables Estimation
+  - Panel Data
+  - Variable Absorption
+  - Software Validation
+authors:
+  - name: José Bayoán Santiago Calderón
+    orcid: 0000-0002-8406-6175
+affiliations:
+  - name: Social and Decision Analytics Division, Biocomplexity Institute and Initiative, University of Virginia
+date: 1 July 2019
+bibliography: ref.bib
