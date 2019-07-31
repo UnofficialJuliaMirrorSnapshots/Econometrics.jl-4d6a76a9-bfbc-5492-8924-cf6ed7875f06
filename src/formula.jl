@@ -1,5 +1,33 @@
-function absorb end
+"""
+    absorb
 
+Dummy function for constructing the FunctionTerm{typeof(absorb)} used in decompose.
+"""
+function absorb end
+"""
+    decompose(f::FormulaTerm,
+              data::AbstractDataFrame,
+              contrasts::Dict{Symbol},
+              wts::Union{Nothing,Symbol},
+              panel::Union{Nothing,Symbol},
+              time::Union{Nothing,Symbol},
+              estimator::Type{<:Union{EconometricsModel,ModelEstimator}},
+              vce::VCE)
+
+Decomposes the arguments passed to a fit(::EconometricModel) into its components.
+
+# Returns
+
+- data::DataFrame
+- exogenous::FormulaTerm
+- iv::FormulaTerm
+- estimator::ModelEstimator
+- X::Matrix{Float64}
+- y::VecOrMat{<:Union{Bool,Int,Float64}}
+- z::Vector{Float64}
+- Z::Matrix{Float64}
+- wts::FrequencyWeights
+"""
 function decompose(f::FormulaTerm,
                    data::AbstractDataFrame,
                    contrasts::Dict{Symbol},
@@ -105,3 +133,21 @@ function decompose(f::FormulaTerm,
     end
     data, exogenous, iv, estimator, X, y, z, Z, wts
 end
+
+remove_intercept(f::AbstractString) =
+    occursin(" ~ 1 + ", f) ? replace(f, " ~ 1 + " => " ~ ") : f
+add_intercept(f::AbstractString) =
+    !occursin(r" ~ -?[0-1] ", f) ? replace(f, r"(^.*?) ~ " => s"\1 ~ 1 + ") : f
+clean_rhs(obj::Tuple) = mapreduce(clean_rhs, (x, y) -> "$x + $y", obj)
+clean_rhs(obj::AbstractTerm) = string(obj)
+clean_rhs(obj::InteractionTerm) = mapreduce(clean_rhs, (x, y) -> "$x & $y", obj.terms)
+clean_rhs(obj::FunctionTerm) = string(obj)[2:end]
+clean_rhs(obj::FormulaTerm) = string("(", obj.lhs, " ~ ", clean_rhs(obj.rhs), ")")
+clean_rhs(obj::FunctionTerm{typeof(absorb)}) = string(obj)[3:end - 1]
+clean_fm(obj::EconometricsModel) =
+    obj.f |>
+    (f -> string(f.lhs, " ~ ", clean_rhs(f.rhs))) |>
+    (f -> isa(obj, EconometricModel{<:Union{RandomEffectsEstimator,
+                                            OrdinalResponse}}) ?
+          remove_intercept(f) : add_intercept(f)) |>
+    (f -> "Formula: $f")
