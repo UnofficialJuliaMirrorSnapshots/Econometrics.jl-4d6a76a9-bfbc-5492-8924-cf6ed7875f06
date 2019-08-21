@@ -1,16 +1,28 @@
 """
-    EconometricModel(f::FormulaTerm, data;
-                     contrasts::Dict{Symbol} = Dict{Symbol,Union{<:AbstractContrasts,<:AbstractTerm}},
-                     weights::Union{Nothing,Symbol} = nothing,
+    EconometricModel(estimator::Type{<:Union{EconometricModel,ModelEstimator}},
+                     f::FormulaTerm,
+                     data;
+                     contrasts::Dict{Symbol} = Dict{Symbol,Union{<:AbstractContrasts,<:AbstractTerm}}(),
+                     wts::Union{Nothing,Symbol} = nothing,
                      panel::Union{Nothing,Symbol} = nothing,
                      time::Union{Nothing,Symbol} = nothing,
-                     estimator::ModelEstimator = ModelEstimator)
+                     vce::VCE = OIM)
 
-    Use fit(EconometricModel, f, data, contrasts = contrasts)
-    Formula has syntax: @formula(response ~ exogenous + (endogenous ~ instruments))
-    For absorbing categorical features use the term `absorb(features)`
-    For the between estimator use the term `between(features)`
-    For the one-way random effects model use the terms `PID(pid) + TID(tid)`
+Formula has syntax:
+
+    @formula(response ~ exogenous + (endogenous ~ instruments) + absorb(highdimscontrols))
+
+Data must implement the Tables.jl API and use CategoricalArrays (CategoricalVector)
+
+Weights are taken as `StatsBase.FrequencyWeights`
+
+Panel and time indicators are used for longitudinal estimators
+
+# Examples
+
+    model = fit(EconometricModel, formula, data, kwargs...)
+    model = fit(BetweenEstimator, formula, data, panel = :panel, kwargs...)
+    model = fit(RandomEffectsEstimator, formula, data, panel = :panel, time = :time, kwargs...)
 """
 mutable struct EconometricModel{E<:ModelEstimator,
                                 F<:FormulaTerm,
@@ -49,7 +61,7 @@ mutable struct EconometricModel{E<:ModelEstimator,
         if isa(estimator, Union{NominalResponse, OrdinalResponse})
             @unpack categories = estimator
             y = [ findfirst(isequal(x), categories) for x ∈ y ]
-            @assert length(categories) > 2
+            @assert length(categories) > 1
         end
         if isa(estimator, NominalResponse)
             ŷ = zeros(0, 0)
